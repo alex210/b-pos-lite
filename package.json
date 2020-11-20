@@ -1,0 +1,19 @@
+{
+  "name": "b-pos-light",
+  "version": "1.0.1",
+  "description": "B-POS light protocol implementation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "B-POS",
+    "PayPass"
+  ],
+  "author": "alex210",
+  "license": "ISC",
+  "dependencies": {
+    "python-struct": "^1.1.3",
+    "serialport": "^9.0.2"
+  }
+}
