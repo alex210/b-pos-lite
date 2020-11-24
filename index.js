@@ -19,7 +19,7 @@ class Bpos {
                 if (dataPUR['RC'] == 0 && dataPUR['INVOICE']) {
                     this.send(`REQ=CON;INVOICE=${dataPUR['INVOICE']};`);
                     this.emitter.on('CON', dataCON => {
-                        this.emitter.removeAllListeners('CON', 'EOT');
+                        for (const channel of ['CON', 'EOT']) this.emitter.removeAllListeners(channel);
                         if (dataCON['RC'] == 0) {
                             resolve(dataPUR);
                         } else {
@@ -27,14 +27,15 @@ class Bpos {
                         }
                     })
                 } else {
+                    for (const channel of ['CON', 'EOT']) this.emitter.removeAllListeners(channel);
                     reject(dataPUR);
                 }
 
             });
 
             this.emitter.on('EOT', () => {
-                this.emitter.removeAllListeners('PUR', 'CON', 'EOT');
-                reject();
+                for (const channel of ['PUR', 'CON', 'EOT']) this.emitter.removeAllListeners(channel);
+                reject('EOT');
             });
         });
     }
@@ -75,7 +76,7 @@ class Bpos {
         this.request(message);
 
         this.emitter.on('ACK', () => {
-            this.emitter.removeAllListeners('ACK', 'NAK');
+            for (const channel of ['ACK', 'NAK']) this.emitter.removeAllListeners(channel);
         });
 
         let count = 1;
@@ -83,7 +84,7 @@ class Bpos {
             count++;
             this.request(message);
             if (count == 3) {
-                this.emitter.removeAllListeners('ACK', 'NAK');
+                for (const channel of ['ACK', 'NAK']) this.emitter.removeAllListeners(channel);
             }
         });
     };
