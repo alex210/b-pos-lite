@@ -14,7 +14,7 @@ class BposEmitter extends EventEmitter {
     listenEvent() {
         this.port.on('data', response => {
             for (let byte in BYTES) {
-                if (response == BYTES[byte]) {
+                if (response.includes(BYTES[byte])) {
                     this.emit(byte);
                     break;
                 }

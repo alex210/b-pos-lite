@@ -48,12 +48,17 @@ class Bpos {
         this.send(`REQ=CAN;INVOICE=${invoice};MID=${this.mid};`);
         return new Promise((resolve, reject) => {
             this.emitter.on('CAN', dataCAN => {
-                this.emitter.removeAllListeners('CAN');
+                for (const channel of ['CAN', 'EOT']) this.emitter.removeAllListeners(channel);
                 if (dataCAN['RC'] == 0) {
                     resolve(dataCAN);
                 } else {
                     reject(dataCAN);
                 }
+            });
+
+            this.emitter.on('EOT', () => {
+                for (const channel of ['CAN', 'EOT']) this.emitter.removeAllListeners(channel);
+                reject('EOT');
             });
         });
     }
