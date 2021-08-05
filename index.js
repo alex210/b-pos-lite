@@ -1,13 +1,15 @@
-const SerialPort = require('serialport');
 const struct = require('python-struct');
 const lrc = require('./lrc');
 const BYTES = require('./BYTES');
 const BposEmitter = require('./bpos-emitter');
+const net = require('net');
 
 class Bpos {
-    constructor(port, mid) {
-        this.port = new SerialPort(port);
-        this.emitter = new BposEmitter(this.port);
+    constructor(ip, port, mid) {
+        this.ip = ip;
+        this.port = port;
+        this.client = new net.Socket();
+        this.emitter = new BposEmitter(this.client);
         this.mid = mid;
     }
 
@@ -19,7 +21,7 @@ class Bpos {
                 if (dataPUR['RC'] == 0 && dataPUR['INVOICE']) {
                     this.send(`REQ=CON;INVOICE=${dataPUR['INVOICE']};`);
                     this.emitter.on('CON', dataCON => {
-                        for (const channel of ['CON', 'EOT']) this.emitter.removeAllListeners(channel);
+                        this.emitter.removeAllListeners('CON', 'EOT');
                         if (dataCON['RC'] == 0) {
                             resolve(dataPUR);
                         } else {
@@ -27,38 +29,32 @@ class Bpos {
                         }
                     })
                 } else {
-                    for (const channel of ['CON', 'EOT']) this.emitter.removeAllListeners(channel);
                     reject(dataPUR);
                 }
 
             });
 
             this.emitter.on('EOT', () => {
-                for (const channel of ['PUR', 'CON', 'EOT']) this.emitter.removeAllListeners(channel);
-                reject('EOT');
+                this.emitter.removeAllListeners('PUR', 'CON', 'EOT');
+                reject();
             });
         });
     }
 
     cancelCardWaiting() {
-        this.port.write(BYTES['EOT']);
+        this.client.write(BYTES['EOT']);
     }
 
     cancel(invoice) {
         this.send(`REQ=CAN;INVOICE=${invoice};MID=${this.mid};`);
         return new Promise((resolve, reject) => {
             this.emitter.on('CAN', dataCAN => {
-                for (const channel of ['CAN', 'EOT']) this.emitter.removeAllListeners(channel);
+                this.emitter.removeAllListeners('CAN');
                 if (dataCAN['RC'] == 0) {
                     resolve(dataCAN);
                 } else {
                     reject(dataCAN);
                 }
-            });
-
-            this.emitter.on('EOT', () => {
-                for (const channel of ['CAN', 'EOT']) this.emitter.removeAllListeners(channel);
-                reject('EOT');
             });
         });
     }
@@ -81,7 +77,7 @@ class Bpos {
         this.request(message);
 
         this.emitter.on('ACK', () => {
-            for (const channel of ['ACK', 'NAK']) this.emitter.removeAllListeners(channel);
+            this.emitter.removeAllListeners('ACK', 'NAK');
         });
 
         let count = 1;
@@ -89,18 +85,22 @@ class Bpos {
             count++;
             this.request(message);
             if (count == 3) {
-                for (const channel of ['ACK', 'NAK']) this.emitter.removeAllListeners(channel);
+                this.emitter.removeAllListeners('ACK', 'NAK');
             }
         });
     };
 
 
     request(message) {
-        const LL = struct.pack('!h', message.length + 3);
-        this.port.write(BYTES['STX']);
-        this.port.write(LL);
-        this.port.write(message);
-        this.port.write(lrc.calculate(message));
+        const buff = Buffer.from(message, "utf-8");
+
+        this.client.connect(this.port, this.ip, () => {
+            const LL = struct.pack('!h', message.length + 3);
+            this.client.write(BYTES['STX']);
+            this.client.write(LL);
+            this.client.write(buff);
+            this.client.write(Buffer.from(lrc.calculate(message)));
+        });
     }
 }
 

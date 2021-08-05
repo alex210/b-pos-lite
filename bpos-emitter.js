@@ -1,5 +1,4 @@
 const EventEmitter = require('events');
-const Ready = require('@serialport/parser-ready');
 const lrc = require('./lrc');
 const BYTES = require('./BYTES');
 
@@ -14,7 +13,7 @@ class BposEmitter extends EventEmitter {
     listenEvent() {
         this.port.on('data', response => {
             for (let byte in BYTES) {
-                if (response.includes(BYTES[byte])) {
+                if (response == BYTES[byte]) {
                     this.emit(byte);
                     break;
                 }
@@ -23,13 +22,11 @@ class BposEmitter extends EventEmitter {
     }
 
     listenResponse() {
-        const parser = this.port.pipe(new Ready({delimiter: BYTES['STX']}));
-
         let LL = null;
         let length = 0;
         let message = Buffer.alloc(0);
 
-        parser.on('data', response => {
+        this.port.on('data', response => {
             if(response[0] === 0 || response[0] === 2 || LL) {
                 if (response[0] === 2) response = response.slice(1);
                 if (!LL) LL = response[1] + 3;
