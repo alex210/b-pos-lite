@@ -1,6 +1,6 @@
 {
   "name": "b-pos-light",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "B-POS light protocol implementation",
   "main": "index.js",
   "scripts": {
