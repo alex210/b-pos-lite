@@ -42,7 +42,7 @@ class Bpos {
     }
 
     cancelCardWaiting() {
-        this.client.write(BYTES['EOT']);
+        this.write(BYTES['EOT']);
     }
 
     cancel(invoice) {
@@ -93,14 +93,18 @@ class Bpos {
 
     request(message) {
         const buff = Buffer.from(message, "utf-8");
+        const LL = struct.pack('!h', message.length + 3);
+        this.write(BYTES['STX'] + LL + buff + Buffer.from(lrc.calculate(message)));
+    }
 
-        this.client.connect(this.port, this.ip, () => {
-            const LL = struct.pack('!h', message.length + 3);
-            this.client.write(BYTES['STX']);
-            this.client.write(LL);
-            this.client.write(buff);
-            this.client.write(Buffer.from(lrc.calculate(message)));
-        });
+    write(data) {
+        if (this.client.connecting) {
+            this.client.write(data);
+        } else {
+            this.client.connect(this.port, this.ip, () => {
+                this.client.write(data);
+            });
+        }
     }
 }
 
